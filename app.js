@@ -7,20 +7,10 @@ db.split("|").forEach(function(r) {
   dict[c] = { name: n, cat: cat };
 });
 
-// 建立候選完整股名快選膠囊容器
-var suggestBox = document.createElement('div');
-suggestBox.id = 'suggestBox';
-suggestBox.style.cssText = 'display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px;';
-var gridEl = document.querySelector('.grid');
-if (gridEl && gridEl.parentNode) {
-  gridEl.parentNode.insertBefore(suggestBox, gridEl);
-}
-
-// 升級輸入框提示：讓「買進總成本」欄位同時支援輸入「買進均價(單價)」或「總成本」
-var costInputEl = document.getElementById('inCost');
-if (costInputEl) {
-  costInputEl.placeholder = '買進均價 或 總成本';
-  costInputEl.step = '0.01';
+var costEl = document.getElementById('inCost');
+if (costEl) {
+  costEl.placeholder = '買進均價 或 總成本';
+  costEl.step = '0.01';
 }
 
 var liveData = {};
@@ -51,8 +41,6 @@ function fmt(n, s) { var r = Math.round(n), str = Math.abs(r).toLocaleString(); 
 function clearPrices() {
   document.getElementById('inPrice').value = '';
   document.getElementById('inPrev').value = '';
-  suggestBox.style.display = 'none';
-  suggestBox.innerHTML = '';
 }
 
 function fillPriceIfFound(c) {
@@ -62,20 +50,9 @@ function fillPriceIfFound(c) {
   }
 }
 
-function pickCandidate(code) {
-  if (dict[code]) {
-    document.getElementById('inName').value = dict[code].name;
-    document.getElementById('inCode').value = code;
-    document.getElementById('inCat').value = dict[code].cat;
-    fillPriceIfFound(code);
-    suggestBox.style.display = 'none';
-  }
-}
-
 function syncCode(v) {
   var c = v.trim().toUpperCase(), elN = document.getElementById('inName'), elC = document.getElementById('inCat');
   if (!c) { elN.value = ''; clearPrices(); return; }
-  suggestBox.style.display = 'none';
   if (dict[c]) { elN.value = dict[c].name; elC.value = dict[c].cat; }
   else if (c.indexOf('00') === 0) { elC.value = 'ETF'; }
   fillPriceIfFound(c);
@@ -84,69 +61,39 @@ function syncCode(v) {
 function syncName(v) {
   var q = v.trim().toUpperCase(), elK = document.getElementById('inCode'), elC = document.getElementById('inCat');
   if (!q) { elK.value = ''; clearPrices(); return; }
-  if (q.length < 2) { suggestBox.style.display = 'none'; return; }
-
-  var matches = [];
+  if (q.length < 2) return;
   for (var k in dict) {
     if (dict[k].name.toUpperCase().indexOf(q) !== -1) {
-      matches.push({ code: k, name: dict[k].name, cat: dict[k].cat });
+      elK.value = k;
+      elC.value = dict[k].cat;
+      fillPriceIfFound(k);
+      break;
     }
-  }
-
-  if (matches.length > 0) {
-    var first = matches.slice(0, 1).pop();
-    elK.value = first.code;
-    elC.value = first.cat;
-    fillPriceIfFound(first.code);
-
-    if (first.name.toUpperCase() !== q) {
-      suggestBox.style.display = 'flex';
-      suggestBox.innerHTML = matches.slice(0, 4).map(function(m) {
-        return '<span onclick="pickCandidate(\'' + m.code + '\')" style="background:#2A2412;border:1px solid #FBBF24;color:#FBBF24;font-size:12px;padding:4px 10px;border-radius:14px;cursor:pointer;">👉 ' + m.name + ' (' + m.code + ')</span>';
-      }).join('');
-    } else {
-      suggestBox.style.display = 'none';
-    }
-  } else {
-    suggestBox.style.display = 'none';
   }
 }
 
 document.getElementById('inName').addEventListener('blur', function() {
-  var q = this.value.trim().toUpperCase();
-  if (q.length >= 2) {
-    var exactOrSingle = [];
-    for (var k in dict) {
-      if (dict[k].name.toUpperCase().indexOf(q) !== -1) exactOrSingle.push(dict[k].name);
-    }
-    if (exactOrSingle.length === 1) {
-      this.value = exactOrSingle.pop();
-      suggestBox.style.display = 'none';
-    }
+  var c = document.getElementById('inCode').value.trim().toUpperCase();
+  if (c && dict[c]) {
+    this.value = dict[c].name;
   }
 });
 
-// 點擊列表「修改」按鈕：可直接編輯股數與買入總成本
 function editItem(i) {
   var it = stocks[i];
   if (!it) return;
-  var newSharesStr = prompt('修改【' + it.name + '】持有股數（1張 = 1000股）：', it.shares);
-  if (newSharesStr === null) return;
-  var newShares = parseFloat(newSharesStr);
-  if (isNaN(newShares) || newShares <= 0) return;
+  var sStr = prompt('修改【' + it.name + '】持有股數（1張=1000）：', it.shares);
+  if (sStr === null) return;
+  var sh = parseFloat(sStr);
+  if (isNaN(sh) || sh <= 0) return;
 
-  var currentAvg = Number((it.cost / it.shares).toFixed(2));
-  var newCostInput = prompt(
-    '修改【' + it.name + '】買入成本：\n• 可直接輸入「總成本金額」（目前：' + Math.round(it.cost) + ' 元）\n• 或輸入「每股買進均價」（目前均價：' + currentAvg + ' 元）',
-    Math.round(it.cost)
-  );
-  if (newCostInput === null) return;
-  var val = parseFloat(newCostInput);
+  var avg = Number((it.cost / it.shares).toFixed(2));
+  var cStr = prompt('修改【' + it.name + '】買入成本（可輸入「每股均價」或「總成本」）：', avg);
+  if (cStr === null) return;
+  var val = parseFloat(cStr);
   if (!isNaN(val) && val > 0) {
-    // 智慧判斷：若輸入數字明顯小於總市值一半且股數>=100，視為「每股均價」自動乘以股數
-    var finalCost = (newShares >= 100 && val < it.price * 2 && val < 2000) ? (val * newShares) : val;
-    stocks[i].shares = newShares;
-    stocks[i].cost = finalCost;
+    stocks[i].shares = sh;
+    stocks[i].cost = (sh >= 100 && val < it.price * 2 && val < 2000) ? (val * sh) : val;
     localStorage.setItem('twStocksV10', JSON.stringify(stocks));
     render();
   }
@@ -201,10 +148,30 @@ function addStock() {
   var c = document.getElementById('inCode').value.trim().toUpperCase() || '自選';
   var rawCost = parseFloat(document.getElementById('inCost').value), prev = parseFloat(document.getElementById('inPrev').value);
 
-  // 智慧判斷：若股數 >= 100 且輸入的成本數字小於股價 2 倍（代表使用者輸入的是「每股買進均價」），自動乘以股數算出總成本
   var finalCost = sh * pr;
   if (!isNaN(rawCost) && rawCost > 0) {
     finalCost = (sh >= 100 && rawCost < pr * 2 && rawCost < 2000) ? (rawCost * sh) : rawCost;
   }
 
   stocks.unshift({ name: n, code: c, cat: document.getElementById('inCat').value, shares: sh, price: pr, cost: finalCost, prev: isNaN(prev) ? pr : prev });
+  ['inName','inCode','inShares','inCost','inPrice','inPrev'].forEach(function(id) { document.getElementById(id).value = ''; });
+  localStorage.setItem('twStocksV10', JSON.stringify(stocks));
+  render();
+}
+
+function syncAll() {
+  var btn = document.getElementById('btnSync');
+  btn.innerText = '⏳ 讀取最新報價...';
+  loadLocalJson(function(success) {
+    var ok = 0;
+    stocks.forEach(function(it) {
+      if (liveData[it.code]) { it.price = liveData[it.code].p; it.prev = liveData[it.code].y; ok++; }
+    });
+    localStorage.setItem('twStocksV10', JSON.stringify(stocks));
+    render();
+    btn.innerText = ok > 0 ? '✅ 已更新 ' + ok + ' 檔' : '⚠️ 尚未產生 prices.json';
+    setTimeout(function() { btn.innerText = '🔄 連網更新股價'; }, 2500);
+  });
+}
+
+render();
