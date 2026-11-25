@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install yfinance
+        run: pip install yfinance --quiet
       - name: Run fetch script
         run: python3 fetch.py
       - name: Commit prices.json
