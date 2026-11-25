@@ -26,10 +26,10 @@
 <body>
 
 <div class="bar">
-  <div><span class="dot"></span><span id="netTxt">就緒 (Yahoo免驗證即時報價)</span></div>
+  <div><span class="dot"></span><span id="netTxt">就緒 (證交所官方直連引擎)</span></div>
   <div>
     <span onclick="forceReload()" style="background:#262626;color:#FBBF24;padding:2px 6px;border-radius:4px;cursor:pointer;margin-right:4px;">⚡ 強制刷新</span>
-    <span>v8.0</span>
+    <span>v9.0</span>
   </div>
 </div>
 
@@ -82,7 +82,7 @@ db.split("|").forEach(function(r) {
 });
 
 var colors = { '半導體':'#3B82F6','AI電子':'#8B5CF6','面板光電':'#06B6D4','ETF':'#F59E0B','金融股':'#EC4899','航運傳產':'#10B981','其他':'#6B7280' };
-var stocks = JSON.parse(localStorage.getItem('twStocksV8')) || [
+var stocks = JSON.parse(localStorage.getItem('twStocksV9')) || [
   { name: '富采', code: '3714', cat: '面板光電', shares: 1000, price: 42.5, prev: 41.0, cost: 40000 },
   { name: '群創', code: '3481', cat: '面板光電', shares: 1000, price: 15.8, prev: 15.5, cost: 15000 }
 ];
@@ -91,23 +91,51 @@ var curTab = '全部';
 function forceReload() { window.location.replace(window.location.pathname + '?t=' + Date.now()); }
 function fmt(n, s) { var r = Math.round(n), str = Math.abs(r).toLocaleString(); return s ? (r > 0 ? '+' : r < 0 ? '-' : '') + str : (r < 0 ? '-' : '') + str; }
 
-// Yahoo v8 免驗證報價介面 (支援上市 .TW 與上櫃 .TWO)
-function fetchOneQuote(code, cb) {
-  var u1 = 'https://allorigins.win' + encodeURIComponent('https://yahoo.com' + code + '.TW?interval=1d&range=2d');
-  fetch(u1).then(function(r) { return r.json(); }).then(function(d) {
-    var meta = d && d.chart && d.chart.result && d.chart.result.shift().meta;
-    if (meta && meta.regularMarketPrice) {
-      cb({ price: Number(meta.regularMarketPrice.toFixed(2)), prev: Number((meta.chartPreviousClose || meta.regularMarketPrice).toFixed(2)) });
-    } else { throw new Error(); }
-  }).catch(function() {
-    var u2 = 'https://allorigins.win' + encodeURIComponent('https://yahoo.com' + code + '.TWO?interval=1d&range=2d');
-    fetch(u2).then(function(r) { return r.json(); }).then(function(d) {
-      var meta = d && d.chart && d.chart.result && d.chart.result.shift().meta;
-      if (meta && meta.regularMarketPrice) {
-        cb({ price: Number(meta.regularMarketPrice.toFixed(2)), prev: Number((meta.chartPreviousClose || meta.regularMarketPrice).toFixed(2)) });
-      } else { cb(null); }
-    }).catch(function() { cb(null); });
+// 台灣證交所官方直連 JSONP 引擎 (免代理、100% 穿透跨域限制、同時抓股名與即時價格)
+function fetchTwseDirect(codeList, callback) {
+  if (!codeList || codeList.length === 0) { callback({}); return; }
+  var cbName = 'twse_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  var query = [];
+  codeList.forEach(function(c) {
+    query.push('tse_' + c + '.tw');
+    query.push('otc_' + c + '.tw');
   });
+
+  var script = document.createElement('script');
+  var timer = setTimeout(function() {
+    delete window[cbName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+    callback({});
+  }, 5000);
+
+  window[cbName] = function(data) {
+    clearTimeout(timer);
+    delete window[cbName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+    var map = {};
+    if (data && data.msgArray) {
+      data.msgArray.forEach(function(item) {
+        if (item.c) {
+          var p = parseFloat(item.z);
+          if (isNaN(p)) p = parseFloat(item.y);
+          var prev = parseFloat(item.y);
+          if (!isNaN(p)) {
+            map[item.c] = { name: item.n || '', price: p, prev: isNaN(prev) ? p : prev };
+          }
+        }
+      });
+    }
+    callback(map);
+  };
+
+  script.src = 'https://twse.com.tw' + query.join('|') + '&json=1&delay=0&callback=' + cbName;
+  script.onerror = function() {
+    clearTimeout(timer);
+    delete window[cbName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+    callback({});
+  };
+  document.body.appendChild(script);
 }
 
 var tmr = null;
@@ -116,18 +144,30 @@ function autoPrice(code) {
   clearTimeout(tmr);
   tmr = setTimeout(function() {
     document.getElementById('inPrice').placeholder = '⏳ 抓報價...';
-    fetchOneQuote(code, function(res) {
+    fetchTwseDirect([code], function(map) {
       document.getElementById('inPrice').placeholder = '目前股價 (自動抓)';
-      if (res) { document.getElementById('inPrice').value = res.price; document.getElementById('inPrev').value = res.prev; }
+      if (map[code]) {
+        if (map[code].name && !document.getElementById('inName').value) {
+          document.getElementById('inName').value = map[code].name;
+        }
+        document.getElementById('inPrice').value = map[code].price;
+        document.getElementById('inPrev').value = map[code].prev;
+      }
     });
-  }, 350);
+  }, 300);
 }
 
 function syncCode(v) {
   var c = v.trim().toUpperCase(), elN = document.getElementById('inName'), elC = document.getElementById('inCat');
   if (c === '') { elN.value = ''; return; }
-  if (dict[c]) { elN.value = dict[c].name; elC.value = dict[c].cat; autoPrice(c); }
-  else if (c.indexOf('00') === 0) { elC.value = 'ETF'; if (c.length >= 4) autoPrice(c); }
+  if (dict[c]) {
+    elN.value = dict[c].name;
+    elC.value = dict[c].cat;
+    autoPrice(c);
+  } else {
+    if (c.indexOf('00') === 0) elC.value = 'ETF';
+    if (c.length >= 4) autoPrice(c);
+  }
 }
 
 function syncName(v) {
@@ -135,7 +175,12 @@ function syncName(v) {
   if (q === '') { elK.value = ''; return; }
   if (q.length < 2) return;
   for (var k in dict) {
-    if (dict[k].name.toUpperCase().indexOf(q) !== -1) { elK.value = k; elC.value = dict[k].cat; autoPrice(k); break; }
+    if (dict[k].name.toUpperCase().indexOf(q) !== -1) {
+      elK.value = k;
+      elC.value = dict[k].cat;
+      autoPrice(k);
+      break;
+    }
   }
 }
 
@@ -150,10 +195,3 @@ function render() {
   var dSum = 0, vSum = 0, cSum = 0, html = '';
   stocks.forEach(function(it, i) {
     if (curTab !== '全部' && it.cat !== curTab) return;
-    var val = it.price * it.shares, dPL = (it.price - it.prev) * it.shares, totPL = val - it.cost;
-    var pct = it.prev > 0 ? ((it.price - it.prev) / it.prev) * 100 : 0;
-    dSum += dPL; vSum += val; cSum += it.cost;
-    var c1 = dPL >= 0 ? '#F04438' : '#12B76A', c2 = totPL >= 0 ? '#F04438' : '#12B76A';
-
-    html += '<div class="row">' +
-      '<div><strong>' + it.name + '</strong> <span style="background:' + (colors[it.cat]||'#555') + ';font-size:10px;padding:1px 4px;border-radius:3px;">' + it.cat + '</span><br>' +
