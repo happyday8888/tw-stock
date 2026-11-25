@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>台股即時損益看板</title>
 <style>
@@ -24,18 +26,28 @@
 </style>
 </head>
 <body>
+
 <div class="bar">
-  <div><span class="dot"></span><span>就緒 (模組化雙向直連版)</span></div>
-  <div><span onclick="forceReload()" style="background:#262626;color:#FBBF24;padding:2px 6px;border-radius:4px;cursor:pointer;margin-right:4px;">⚡ 強制刷新</span><span>v10.0</span></div>
+  <div><span class="dot"></span><span>就緒 (24H全天候雙向報價版)</span></div>
+  <div>
+    <span onclick="forceReload()" style="background:#262626;color:#FBBF24;padding:2px 6px;border-radius:4px;cursor:pointer;margin-right:4px;">⚡ 強制刷新</span>
+    <span>v11.0</span>
+  </div>
 </div>
+
 <div class="box">
   <div style="font-size:14px;font-weight:bold;color:#FBBF24;margin-bottom:8px;">➕ 新增我的個股</div>
   <div class="grid">
     <input type="text" id="inName" class="hl" oninput="syncName(this.value)" onkeyup="syncName(this.value)" placeholder="輸入股名 (如: 富采)">
     <input type="text" id="inCode" class="hl" oninput="syncCode(this.value)" onkeyup="syncCode(this.value)" placeholder="輸入代號 (如: 3714)">
     <select id="inCat">
-      <option value="半導體">📁 半導體</option><option value="AI電子">📁 AI / 電子</option><option value="面板光電">📁 面板 / 光電</option>
-      <option value="ETF">📁 ETF 基金</option><option value="金融股">📁 金融股</option><option value="航運傳產">📁 航運 / 傳產</option><option value="其他">📁 其他自訂</option>
+      <option value="半導體">📁 半導體</option>
+      <option value="AI電子">📁 AI / 電子</option>
+      <option value="面板光電">📁 面板 / 光電</option>
+      <option value="ETF">📁 ETF 基金</option>
+      <option value="金融股">📁 金融股</option>
+      <option value="航運傳產">📁 航運 / 傳產</option>
+      <option value="其他">📁 其他自訂</option>
     </select>
     <input type="number" id="inShares" placeholder="股數 (1張=1000)">
     <input type="number" id="inCost" placeholder="買進總成本">
@@ -47,16 +59,25 @@
     <button type="button" id="btnSync" onclick="syncAll()" class="btn-live">🔄 連網更新股價</button>
   </div>
 </div>
+
 <div id="tabs" class="tabs"></div>
+
 <div class="sum">
   <div><div style="font-size:11px;color:#888;">今日損益</div><div id="sDay" style="font-size:17px;font-weight:bold;">+0</div></div>
   <div><div style="font-size:11px;color:#888;">累積損益</div><div id="sTot" style="font-size:17px;font-weight:bold;">0</div></div>
   <div><div style="font-size:11px;color:#888;">股票市值</div><div id="sVal" style="font-size:17px;font-weight:bold;">0</div></div>
 </div>
+
 <div style="display:grid;grid-template-columns:3.4fr 2.4fr 2fr 2.4fr;padding:6px;border-bottom:1px solid #333;color:#888;font-size:12px;">
   <div>庫存股 / 群組</div><div style="text-align:right;">今日損益</div><div style="text-align:right;">現價/漲跌</div><div style="text-align:right;">總損益</div>
 </div>
 <div id="list"></div>
-<script src="app.js?v=10"></script>
+
+<script>
+  // 自動帶入最新時間戳記載入 app.js，徹底杜絕手機瀏覽器快取舊程式碼
+  var s = document.createElement('script');
+  s.src = 'app.js?t=' + Date.now();
+  document.body.appendChild(s);
+</script>
 </body>
 </html>
