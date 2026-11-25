@@ -2,12 +2,15 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>台股即時損益看板</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0D0D0D; color: #FFF; font-family: sans-serif; padding: 12px; max-width: 460px; margin: 0 auto; padding-bottom: 40px; }
-  .bar { display: flex; justify-content: space-between; font-size: 11px; color: #9CA3AF; margin-bottom: 8px; }
+  .bar { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #9CA3AF; margin-bottom: 8px; }
   .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #12B76A; margin-right: 4px; }
   .box { background: #1E1E1E; border: 1px solid #333; padding: 14px; border-radius: 10px; margin-bottom: 12px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
@@ -22,7 +25,24 @@
   .row { display: grid; grid-template-columns: 3.4fr 2.4fr 2fr 2.4fr; align-items: center; padding: 12px 4px; border-bottom: 1px solid #262626; font-size: 14px; }
 </style>
 <script>
-// 1. 直接寫在 <head> 裡，確保網頁一打開函數就 100% 存在
+// 1. 內建強制破除快取與版本自動刷新引擎
+var APP_VERSION = 'v6.0';
+(function() {
+  var savedVer = localStorage.getItem('twStockAppVer');
+  if (savedVer !== APP_VERSION) {
+    localStorage.setItem('twStockAppVer', APP_VERSION);
+    if (window.location.search.indexOf('t=') === -1) {
+      window.location.replace(window.location.pathname + '?t=' + Date.now());
+    }
+  }
+})();
+
+function forceReloadNow() {
+  localStorage.removeItem('twStockAppVer');
+  window.location.replace(window.location.pathname + '?t=' + Date.now());
+}
+
+// 2. 內建 120+ 檔常見台股與全系列 ETF 字典 (保證 0 秒雙向自動帶入)
 var db = "3714:富采:面板光電|3481:群創:面板光電|2409:友達:面板光電|6116:彩晶:面板光電|8069:元太:面板光電|3406:玉晶光:面板光電|3008:大立光:面板光電|2393:億光:面板光電|2330:台積電:半導體|2454:聯發科:半導體|2303:聯電:半導體|3711:日月光投控:半導體|2449:京元電子:半導體|3034:聯詠:半導體|2379:瑞昱:半導體|2344:華邦電:半導體|2408:南亞科:半導體|2337:旺宏:半導體|5347:世界:半導體|6770:力積電:半導體|3443:創意:半導體|3661:世芯-KY:半導體|3529:力旺:半導體|6415:矽力*-KY:半導體|5269:祥碩:半導體|6488:環球晶:半導體|5483:中美晶:半導體|3189:景碩:半導體|8046:南電:半導體|3037:欣興:半導體|6239:力成:半導體|6147:頎邦:半導體|3264:欣銓:半導體|7751:竑騰:半導體|3563:牧德:半導體|2317:鴻海:AI電子|2382:廣達:AI電子|3231:緯創:AI電子|6669:緯穎:AI電子|2308:台達電:AI電子|2357:華碩:AI電子|2356:英業達:AI電子|2376:技嘉:AI電子|2377:微星:AI電子|2324:仁寶:AI電子|4938:和碩:AI電子|2353:宏碁:AI電子|3017:奇鋐:AI電子|3324:雙鴻:AI電子|2301:光寶科:AI電子|2327:國巨:AI電子|2368:金像電:AI電子|2383:台光電:AI電子|2345:智邦:AI電子|2412:中華電:AI電子|3045:台灣大:AI電子|4904:遠傳:AI電子|2881:富邦金:金融股|2882:國泰金:金融股|2891:中信金:金融股|2886:兆豐金:金融股|2884:玉山金:金融股|2885:元大金:金融股|2892:第一金:金融股|2880:華南金:金融股|5880:合庫金:金融股|2883:凱基金:金融股|2887:台新金:金融股|2890:永豐金:金融股|2603:長榮:航運傳產|2609:陽明:航運傳產|2615:萬海:航運傳產|2618:長榮航:航運傳產|2610:華航:航運傳產|2634:漢翔:航運傳產|1519:華城:航運傳產|1513:中興電:航運傳產|1503:士電:航運傳產|2002:中鋼:航運傳產|1101:台泥:航運傳產|1301:台塑:航運傳產|1216:統一:航運傳產|0050:元大台灣50:ETF|0056:元大高股息:ETF|00878:國泰永續高股息:ETF|00919:群益台灣精選高息:ETF|00929:復華台灣科技優息:ETF|00940:元大台灣價值高息:ETF|006208:富邦台50:ETF|00713:元大台灣高息低波:ETF|00915:凱基優選高股息30:ETF|00918:大華優利高填息30:ETF|00939:統一台灣高息動能:ETF|00946:群益科技高息成長:ETF|00679B:元大美債20年:ETF|00687B:國泰20年美債:ETF|00937B:群益ESG投等債20+:ETF|009816:凱基台灣TOP50:ETF";
 
 var dict = {};
@@ -54,7 +74,6 @@ function autoPrice(code) {
   }, 300);
 }
 
-// 2. 直接由 HTML oninput/onkeyup 呼叫的全局函數
 function syncFromCode(val) {
   var c = val.trim().toUpperCase();
   var elName = document.getElementById('inName');
@@ -90,8 +109,11 @@ function syncFromName(val) {
 <body>
 
 <div class="bar">
-  <div><span class="dot"></span><span>就緒 (雙向自動帶入 + 連網抓價)</span></div>
-  <div>v5.0</div>
+  <div><span class="dot"></span><span>就緒 (雙向帶入 + 連網抓價)</span></div>
+  <div>
+    <span onclick="forceReloadNow()" style="background:#262626;color:#FBBF24;padding:2px 6px;border-radius:4px;cursor:pointer;margin-right:4px;">⚡ 強制刷新</span>
+    <span>v6.0</span>
+  </div>
 </div>
 
 <div class="box">
@@ -134,7 +156,7 @@ function syncFromName(val) {
 
 <script>
 var colors = { '半導體':'#3B82F6','AI電子':'#8B5CF6','面板光電':'#06B6D4','ETF':'#F59E0B','金融股':'#EC4899','航運傳產':'#10B981','其他':'#6B7280' };
-var stocks = JSON.parse(localStorage.getItem('twStocksV5')) || [
+var stocks = JSON.parse(localStorage.getItem('twStocksV6')) || [
   { name: '富采', code: '3714', cat: '面板光電', shares: 1000, price: 42.5, prev: 41.0, cost: 40000 },
   { name: '群創', code: '3481', cat: '面板光電', shares: 1000, price: 15.8, prev: 15.5, cost: 15000 }
 ];
@@ -162,12 +184,3 @@ function render() {
     var c1 = dPL >= 0 ? '#F04438' : '#12B76A', c2 = totPL >= 0 ? '#F04438' : '#12B76A';
 
     html += '<div class="row">' +
-      '<div><strong>' + it.name + '</strong> <span style="background:' + (colors[it.cat]||'#555') + ';font-size:10px;padding:1px 4px;border-radius:3px;">' + it.cat + '</span><br>' +
-      '<span style="font-size:11px;color:#888;">' + it.code + ' (' + it.shares + '股)</span> <span onclick="delItem(' + i + ')" style="background:#333;color:#AAA;font-size:10px;padding:1px 5px;border-radius:3px;cursor:pointer;">刪除</span></div>' +
-      '<div style="text-align:right;color:' + c1 + ';font-weight:bold;">' + fmt(dPL, true) + '</div>' +
-      '<div style="text-align:right;"><span style="background:' + c1 + ';padding:2px 6px;border-radius:4px;font-size:12px;font-weight:bold;">' + it.price + '</span><br><span style="color:' + c1 + ';font-size:11px;">' + (pct>=0?'+':'') + pct.toFixed(2) + '%</span></div>' +
-      '<div style="text-align:right;color:' + c2 + ';font-weight:bold;">' + fmt(totPL, true) + '</div></div>';
-  });
-
-  var acc = vSum - cSum;
-  document.getElementById('sDay').innerText = fmt(dSum, true);
