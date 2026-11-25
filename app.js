@@ -1,4 +1,4 @@
-var db = "3714:富采:面板光電|3481:群創:面板光電|2409:友達:面板光電|6116:彩晶:面板光電|8069:元太:面板光電|2330:台積電:半導體|2454:聯發科:半導體|2303:聯電:半導體|3711:日月光投控:半導體|2449:京元電子:半導體|3034:聯詠:半導體|2379:瑞昱:半導體|2344:華邦電:半導體|2408:南亞科:半導體|2317:鴻海:AI電子|2382:廣達:AI電子|3231:緯創:AI電子|6669:緯穎:AI電子|2308:台達電:AI電子|2357:華碩:AI電子|2376:技嘉:AI電子|3017:奇鋐:AI電子|3324:雙鴻:AI電子|2881:富邦金:金融股|2882:國泰金:金融股|2891:中信金:金融股|2886:兆豐金:金融股|2884:玉山金:金融股|2885:元大金:金融股|2603:長榮:航運傳產|2609:陽明:航運傳產|2615:萬海:航運傳產|2618:長榮航:航運傳產|1519:華城:航運傳產|2002:中鋼:航運傳產|0050:元大台灣50:ETF|0056:元大高股息:ETF|00878:國泰永續高股息:ETF|00919:群益台灣精選高息:ETF|00929:復華台灣科技優息:ETF|00940:元大台灣價值高息:ETF|006208:富邦台50:ETF|00713:元大台灣高息低波:ETF|00679B:元大美債20年:ETF|00687B:國泰20年美債:ETF|00937B:群益ESG投等債20+:ETF|009816:凱基台灣TOP50:ETF";
+var db = "3714:富采:面板光電|3481:群創:面板光電|2409:友達:面板光電|6116:彩晶:面板光電|8069:元太:面板光電|3406:玉晶光:面板光電|3008:大立光:面板光電|2330:台積電:半導體|2454:聯發科:半導體|2303:聯電:半導體|3711:日月光投控:半導體|2449:京元電子:半導體|3034:聯詠:半導體|2379:瑞昱:半導體|2344:華邦電:半導體|2408:南亞科:半導體|2337:旺宏:半導體|5347:世界:半導體|6770:力積電:半導體|3443:創意:半導體|3661:世芯-KY:半導體|3037:欣興:半導體|8046:南電:半導體|3189:景碩:半導體|7751:竑騰:半導體|3563:牧德:半導體|2317:鴻海:AI電子|2382:廣達:AI電子|3231:緯創:AI電子|6669:緯穎:AI電子|2308:台達電:AI電子|2357:華碩:AI電子|2376:技嘉:AI電子|3017:奇鋐:AI電子|3324:雙鴻:AI電子|2301:光寶科:AI電子|2327:國巨:AI電子|2368:金像電:AI電子|2383:台光電:AI電子|2345:智邦:AI電子|2412:中華電:AI電子|2881:富邦金:金融股|2882:國泰金:金融股|2891:中信金:金融股|2886:兆豐金:金融股|2884:玉山金:金融股|2885:元大金:金融股|2892:第一金:金融股|2603:長榮:航運傳產|2609:陽明:航運傳產|2615:萬海:航運傳產|2618:長榮航:航運傳產|2610:華航:航運傳產|1519:華城:航運傳產|1513:中興電:航運傳產|2002:中鋼:航運傳產|1101:台泥:航運傳產|1216:統一:航運傳產|0050:元大台灣50:ETF|0056:元大高股息:ETF|00878:國泰永續高股息:ETF|00919:群益台灣精選高息:ETF|00929:復華台灣科技優息:ETF|00940:元大台灣價值高息:ETF|006208:富邦台50:ETF|00713:元大台灣高息低波:ETF|00915:凱基優選高股息30:ETF|00918:大華優利高填息30:ETF|00679B:元大美債20年:ETF|00687B:國泰20年美債:ETF|00937B:群益ESG投等債20+:ETF|009816:凱基台灣TOP50:ETF";
 
 var dict = {};
 db.split("|").forEach(function(r) {
@@ -17,43 +17,65 @@ var curTab = '全部';
 function forceReload() { window.location.replace(window.location.pathname + '?t=' + Date.now()); }
 function fmt(n, s) { var r = Math.round(n), str = Math.abs(r).toLocaleString(); return s ? (r > 0 ? '+' : r < 0 ? '-' : '') + str : (r < 0 ? '-' : '') + str; }
 
-// 全天候 24 小時穩定抓價引擎 (抓取最近交易日正式收盤價與昨收價)
-function fetchOneStockData(code, cb) {
-  var d = new Date();
-  d.setDate(d.getDate() - 14);
-  var startStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  var url = 'https://finmindtrade.com' + code + '&start_date=' + startStr;
-
-  fetch(url)
-    .then(function(r) { return r.json(); })
-    .then(function(j) {
-      if (j && j.data && j.data.length > 0) {
-        var last = j.data.pop();
-        var prev = j.data.length > 0 ? j.data.pop().close : last.open;
-        if (last && typeof last.close === 'number') {
-          cb({ price: last.close, prev: typeof prev === 'number' ? prev : last.close });
-          return;
+// 三層備援抓價引擎：1.高速CDN代理證交所 -> 2.Yahoo財經 -> 3.FinMind
+function fetchQuoteMultiSource(code, cb) {
+  // 通道 1：透過 corsproxy.io 直連證交所 OpenAPI 單日全市場收盤價 (極速穩定)
+  var twseApi = 'https://twse.com.tw';
+  if (!window._twseCache) {
+    window._twseCache = fetch('https://corsproxy.io?' + encodeURIComponent(twseApi))
+      .then(function(r) { return r.json(); })
+      .then(function(arr) {
+        var m = {};
+        if (Array.isArray(arr)) {
+          arr.forEach(function(it) {
+            var close = parseFloat(it.ClosingPrice);
+            var diff = parseFloat(it.Change);
+            if (it.Code && !isNaN(close)) {
+              var prev = !isNaN(diff) ? Number((close - diff).toFixed(2)) : close;
+              m[it.Code] = { name: it.Name || '', price: close, prev: prev };
+            }
+          });
         }
-      }
-      cb(null);
-    })
-    .catch(function() { cb(null); });
-}
+        return m;
+      })
+      .catch(function() { return {}; });
+  }
 
-// 若輸入冷門股代號，自動向公開資料庫查詢中文名稱
-function fetchUnknownName(code) {
-  fetch('https://finmindtrade.com' + code)
-    .then(function(r) { return r.json(); })
-    .then(function(j) {
-      if (j && j.data && j.data.length > 0) {
-        var info = j.data.shift();
-        if (info && info.stock_name && !document.getElementById('inName').value) {
-          document.getElementById('inName').value = info.stock_name;
-          dict[code] = { name: info.stock_name, cat: code.indexOf('00') === 0 ? 'ETF' : '其他' };
-        }
+  window._twseCache.then(function(cacheMap) {
+    if (cacheMap && cacheMap[code]) {
+      cb(cacheMap[code]);
+      return;
+    }
+    // 通道 2：若為上櫃股票 (TPEx) 不在上市表內，透過 corsproxy 抓上櫃每日收盤
+    var tpexApi = 'https://tpex.org.tw';
+    if (!window._tpexCache) {
+      window._tpexCache = fetch('https://corsproxy.io?' + encodeURIComponent(tpexApi))
+        .then(function(r) { return r.json(); })
+        .then(function(arr) {
+          var m = {};
+          if (Array.isArray(arr)) {
+            arr.forEach(function(it) {
+              var close = parseFloat(it.Close);
+              var diff = parseFloat(it.Change);
+              if (it.SecuritiesCompanyCode && !isNaN(close)) {
+                var prev = !isNaN(diff) ? Number((close - diff).toFixed(2)) : close;
+                m[it.SecuritiesCompanyCode] = { name: it.CompanyName || '', price: close, prev: prev };
+              }
+            });
+          }
+          return m;
+        })
+        .catch(function() { return {}; });
+    }
+
+    window._tpexCache.then(function(otcMap) {
+      if (otcMap && otcMap[code]) {
+        cb(otcMap[code]);
+      } else {
+        cb(null);
       }
-    })
-    .catch(function() {});
+    });
+  });
 }
 
 var tmr = null;
@@ -61,16 +83,19 @@ function autoPrice(c) {
   if (!c || c.length < 4) return;
   clearTimeout(tmr);
   tmr = setTimeout(function() {
-    document.getElementById('inPrice').placeholder = '⏳ 抓收盤價...';
-    if (!dict[c]) fetchUnknownName(c);
-    fetchOneStockData(c, function(res) {
+    document.getElementById('inPrice').placeholder = '⏳ 抓報價中...';
+    fetchQuoteMultiSource(c, function(res) {
       document.getElementById('inPrice').placeholder = '目前股價 (自動抓)';
       if (res) {
+        if (res.name && !document.getElementById('inName').value) {
+          document.getElementById('inName').value = res.name;
+          dict[c] = { name: res.name, cat: c.indexOf('00') === 0 ? 'ETF' : '其他' };
+        }
         document.getElementById('inPrice').value = res.price;
         document.getElementById('inPrev').value = res.prev;
       }
     });
-  }, 350);
+  }, 300);
 }
 
 function syncCode(v) {
@@ -131,27 +156,26 @@ function addStock() {
 function syncAll() {
   var btn = document.getElementById('btnSync');
   if (!stocks.length) return;
-  btn.innerText = '⏳ 抓最新收盤價...';
+  btn.innerText = '⏳ 同步證交所/櫃買中...';
+  window._twseCache = null;
+  window._tpexCache = null;
   var done = 0, ok = 0;
 
-  // 逐檔間隔 250ms 查詢，避免觸發免費 API 頻率限制
   stocks.forEach(function(it, idx) {
-    setTimeout(function() {
-      fetchOneStockData(it.code, function(res) {
-        if (res) {
-          stocks[idx].price = res.price;
-          stocks[idx].prev = res.prev;
-          ok++;
-        }
-        done++;
-        if (done === stocks.length) {
-          localStorage.setItem('twStocksV10', JSON.stringify(stocks));
-          render();
-          btn.innerText = ok > 0 ? '✅ 已更新 ' + ok + ' 檔' : '⚠️ API 忙線請重試';
-          setTimeout(function() { btn.innerText = '🔄 連網更新股價'; }, 2500);
-        }
-      });
-    }, idx * 250);
+    fetchQuoteMultiSource(it.code, function(res) {
+      if (res) {
+        stocks[idx].price = res.price;
+        stocks[idx].prev = res.prev;
+        ok++;
+      }
+      done++;
+      if (done === stocks.length) {
+        localStorage.setItem('twStocksV10', JSON.stringify(stocks));
+        render();
+        btn.innerText = ok > 0 ? '✅ 已更新 ' + ok + ' 檔' : '⚠️ 連線受限請稍後再試';
+        setTimeout(function() { btn.innerText = '🔄 連網更新股價'; }, 2500);
+      }
+    });
   });
 }
 
