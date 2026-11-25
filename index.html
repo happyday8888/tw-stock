@@ -1,14 +1,150 @@
-<div style="background:#121212;color:#FFF;font-family:sans-serif;padding:12px;max-width:440px;margin:0 auto;">
-  <div style="background:#1E1E1E;border:1px solid #333;padding:12px;border-radius:8px;margin-bottom:14px;">
-    <div style="font-size:13px;font-weight:bold;color:#FBBF24;margin-bottom:8px;">➕ 新增我的個股 (支援打字與選單快選)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-      <input type="text" id="sName" list="nameOptions" oninput="byName(this.value)" onchange="byName(this.value)" onblur="byName(this.value)" placeholder="輸入股名 (如富采)" style="background:#121212;border:1px solid #FBBF24;color:#FFF;padding:8px;border-radius:4px;width:100%;">
-      <input type="text" id="sCode" list="codeOptions" oninput="byCode(this.value)" onchange="byCode(this.value)" onblur="byCode(this.value)" placeholder="輸入代號 (如3714)" style="background:#121212;border:1px solid #FBBF24;color:#FFF;padding:8px;border-radius:4px;width:100%;">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>台股即時損益看板</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #0D0D0D;
+      color: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 12px;
+      max-width: 460px;
+      margin: 0 auto;
+      padding-bottom: 40px;
+    }
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #9CA3AF;
+      margin-bottom: 10px;
+      padding: 0 4px;
+    }
+    .status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #FBBF24;
+      margin-right: 5px;
+    }
+    .panel {
+      background: #1E1E1E;
+      border: 1px solid #333;
+      padding: 14px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+    .panel-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #FBBF24;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    input, select {
+      background: #121212;
+      border: 1px solid #444;
+      color: #FFF;
+      padding: 9px 10px;
+      border-radius: 6px;
+      width: 100%;
+      font-size: 14px;
+    }
+    input.highlight { border-color: #FBBF24; }
+    .btn-group { display: flex; gap: 8px; }
+    button.action-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-add { background: #F04438; color: #FFF; }
+    .btn-live { background: #262626; color: #FBBF24; border: 1px solid #524118; }
+    
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      margin-bottom: 8px;
+    }
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    .summary-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      background: #1A1A1A;
+      border: 1px solid #2A2A2A;
+      padding: 14px 10px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .sum-label { font-size: 12px; color: #999; margin-bottom: 4px; }
+    .sum-val { font-size: 18px; font-weight: bold; }
+
+    .table-head {
+      display: grid;
+      grid-template-columns: 3.4fr 2.4fr 2fr 2.4fr;
+      padding: 8px 6px;
+      border-bottom: 1px solid #333;
+      color: #888;
+      font-size: 12px;
+    }
+    .stock-row {
+      display: grid;
+      grid-template-columns: 3.4fr 2.4fr 2fr 2.4fr;
+      align-items: center;
+      padding: 12px 6px;
+      border-bottom: 1px solid #262626;
+      font-size: 14px;
+    }
+    .del-tag {
+      background: #2A2A2A;
+      color: #999;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="status-bar">
+    <div><span id="netDot" class="status-dot"></span><span id="netStatus">連線台股資料庫中...</span></div>
+    <div id="lastSyncTime">--:--</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">
+      <span>➕ 新增我的個股</span>
+      <span style="font-size:11px; color:#888; font-weight:normal;">股名 / 代號雙向自動帶入</span>
+    </div>
+    <div class="input-grid">
+      <input type="text" id="inName" class="highlight" list="nameOptions" placeholder="輸入股名 (如: 富采)">
+      <input type="text" id="inCode" class="highlight" list="codeOptions" placeholder="輸入代號 (如: 3714)">
       
       <datalist id="nameOptions"></datalist>
       <datalist id="codeOptions"></datalist>
 
-      <select id="sCat" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;font-size:13px;">
+      <select id="inCat">
         <option value="半導體">📁 半導體</option>
         <option value="AI電子">📁 AI / 電子</option>
         <option value="面板光電">📁 面板 / 光電</option>
@@ -17,32 +153,126 @@
         <option value="航運傳產">📁 航運 / 傳產</option>
         <option value="其他">📁 其他自訂</option>
       </select>
-      <input type="number" id="sShares" placeholder="股數 (必填，1張=1000)" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;">
+      <input type="number" id="inShares" placeholder="股數 (必填，1張=1000)">
       
-      <input type="number" id="sCost" placeholder="買進總成本" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;">
-      <input type="number" step="0.01" id="sPrice" placeholder="目前股價 (必填)" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;">
-      <input type="number" step="0.01" id="sPrev" placeholder="昨日收盤價" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;grid-column:span 2;">
+      <input type="number" id="inCost" placeholder="買進總成本 (元)">
+      <input type="number" step="0.01" id="inPrice" placeholder="目前股價 (自動抓)">
+      <input type="number" step="0.01" id="inPrev" placeholder="昨日收盤價 (自動抓)" style="grid-column: span 2;">
     </div>
-    <div style="display:flex;gap:8px;">
-      <button type="button" onclick="addMyStock()" style="flex:1;padding:9px;border:none;border-radius:5px;font-weight:bold;background:#F04438;color:#FFF;cursor:pointer;">確認加入</button>
-      <button type="button" onclick="simPrices()" style="flex:1;padding:9px;border:none;border-radius:5px;font-weight:bold;background:#333;color:#DDD;cursor:pointer;">模擬漲跌</button>
+    <div class="btn-group">
+      <button type="button" id="btnAdd" class="action-btn btn-add">確認加入</button>
+      <button type="button" id="btnSync" class="action-btn btn-live">🔄 連網更新股價</button>
     </div>
   </div>
 
-  <div id="filterTabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:6px;"></div>
+  <div id="tabs" class="filter-tabs"></div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:#1A1A1A;padding:12px;border-radius:8px;margin-bottom:12px;text-align:center;">
-    <div><div style="font-size:11px;color:#999;">今日損益</div><div id="sumToday" style="font-size:17px;font-weight:bold;color:#F04438;">+0</div></div>
-    <div><div style="font-size:11px;color:#999;">累積損益</div><div id="sumTotal" style="font-size:17px;font-weight:bold;color:#12B76A;">0</div></div>
-    <div><div style="font-size:11px;color:#999;">股票市值</div><div id="sumVal" style="font-size:17px;font-weight:bold;">0</div></div>
+  <div class="summary-box">
+    <div>
+      <div class="sum-label">今日損益</div>
+      <div id="sDay" class="sum-val" style="color:#F04438;">+0</div>
+    </div>
+    <div>
+      <div class="sum-label">累積損益</div>
+      <div id="sTot" class="sum-val" style="color:#12B76A;">0</div>
+    </div>
+    <div>
+      <div class="sum-label">股票市值</div>
+      <div id="sVal" class="sum-val">0</div>
+    </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:3.4fr 2.4fr 2fr 2.4fr;padding:6px;border-bottom:1px solid #333;color:#888;font-size:12px;">
+  <div class="table-head">
     <div>庫存股 / 群組</div>
     <div style="text-align:right;">今日損益</div>
     <div style="text-align:right;">現價/漲跌</div>
     <div style="text-align:right;">總損益</div>
   </div>
-
   <div id="list"></div>
-</div>
+
+<script>
+window.onload = function() {
+  var db = "3714:富采:面板光電|3481:群創:面板光電|2409:友達:面板光電|6116:彩晶:面板光電|8069:元太:面板光電|3406:玉晶光:面板光電|3008:大立光:面板光電|2393:億光:面板光電|2330:台積電:半導體|2454:聯發科:半導體|2303:聯電:半導體|3711:日月光投控:半導體|2449:京元電子:半導體|3034:聯詠:半導體|2379:瑞昱:半導體|2344:華邦電:半導體|2408:南亞科:半導體|2337:旺宏:半導體|5347:世界:半導體|6770:力積電:半導體|3443:創意:半導體|3661:世芯-KY:半導體|3037:欣興:半導體|8046:南電:半導體|3189:景碩:半導體|7751:竑騰:半導體|3563:牧德:半導體|2317:鴻海:AI電子|2382:廣達:AI電子|3231:緯創:AI電子|6669:緯穎:AI電子|2308:台達電:AI電子|2357:華碩:AI電子|2356:英業達:AI電子|2376:技嘉:AI電子|2377:微星:AI電子|3017:奇鋐:AI電子|3324:雙鴻:AI電子|2301:光寶科:AI電子|2327:國巨:AI電子|2368:金像電:AI電子|2383:台光電:AI電子|2345:智邦:AI電子|2412:中華電:AI電子|2881:富邦金:金融股|2882:國泰金:金融股|2891:中信金:金融股|2886:兆豐金:金融股|2884:玉山金:金融股|2885:元大金:金融股|2892:第一金:金融股|2880:華南金:金融股|5880:合庫金:金融股|2883:凱基金:金融股|2887:台新金:金融股|2890:永豐金:金融股|2603:長榮:航運傳產|2609:陽明:航運傳產|2615:萬海:航運傳產|2618:長榮航:航運傳產|2610:華航:航運傳產|1519:華城:航運傳產|1513:中興電:航運傳產|1503:士電:航運傳產|2002:中鋼:航運傳產|1101:台泥:航運傳產|1301:台塑:航運傳產|1216:統一:航運傳產|2634:漢翔:航運傳產|0050:元大台灣50:ETF|0056:元大高股息:ETF|00878:國泰永續高股息:ETF|00919:群益台灣精選高息:ETF|00929:復華台灣科技優息:ETF|00940:元大台灣價值高息:ETF|006208:富邦台50:ETF|00713:元大台灣高息低波:ETF|00915:凱基優選高股息30:ETF|00918:大華優利高填息30:ETF|00939:統一台灣高息動能:ETF|00946:群益科技高息成長:ETF|00679B:元大美債20年:ETF|00687B:國泰20年美債:ETF|00937B:群益ESG投等債20+:ETF|009816:凱基台灣TOP50:ETF";
+
+  var dict = {};
+  db.split("|").forEach(function(r) {
+    var p = r.split(":");
+    var c = p.shift(), n = p.shift(), cat = p.shift();
+    dict[c] = { name: n, cat: cat };
+  });
+
+  try {
+    var cachedDict = localStorage.getItem('ghTwMasterDictV1');
+    if (cachedDict) {
+      var parsed = JSON.parse(cachedDict);
+      for (var key in parsed) {
+        if (parsed.hasOwnProperty(key)) dict[key] = parsed[key];
+      }
+    }
+  } catch (e) {}
+
+  function updateDatalists() {
+    var nOpts = '', cOpts = '';
+    for (var code in dict) {
+      if (dict.hasOwnProperty(code)) {
+        nOpts += '<option value="' + dict[code].name + '">';
+        cOpts += '<option value="' + code + '">';
+      }
+    }
+    document.getElementById('nameOptions').innerHTML = nOpts;
+    document.getElementById('codeOptions').innerHTML = cOpts;
+  }
+  updateDatalists();
+
+  function mapIndustry(ind, code) {
+    if (code.indexOf('00') === 0 || (ind && ind.indexOf('ETF') !== -1)) return 'ETF';
+    if (!ind) return '其他';
+    if (ind.indexOf('半導體') !== -1) return '半導體';
+    if (ind.indexOf('光電') !== -1) return '面板光電';
+    if (ind.indexOf('電子') !== -1 || ind.indexOf('電腦') !== -1 || ind.indexOf('通信') !== -1) return 'AI電子';
+    if (ind.indexOf('金融') !== -1) return '金融股';
+    if (ind.indexOf('航運') !== -1 || ind.indexOf('鋼鐵') !== -1 || ind.indexOf('塑膠') !== -1 || ind.indexOf('生技') !== -1 || ind.indexOf('電機') !== -1) return '航運傳產';
+    return '其他';
+  }
+
+  function syncMasterStocks() {
+    var dot = document.getElementById('netDot');
+    var statusEl = document.getElementById('netStatus');
+    fetch('https://finmindtrade.com')
+      .then(function(r) { return r.json(); })
+      .then(function(j) {
+        if (j && j.data && j.data.length > 100) {
+          var count = 0;
+          j.data.forEach(function(row) {
+            if (row.stock_id && row.stock_name) {
+              dict[row.stock_id] = {
+                name: row.stock_name,
+                cat: mapIndustry(row.industry_category, row.stock_id)
+              };
+              count++;
+            }
+          });
+          try { localStorage.setItem('ghTwMasterDictV1', JSON.stringify(dict)); } catch (e) {}
+          updateDatalists();
+          dot.style.background = '#12B76A';
+          statusEl.innerText = '已連網同步全台股 (' + count + '檔)';
+        }
+      })
+      .catch(function() {
+        dot.style.background = '#12B76A';
+        statusEl.innerText = '就緒 (內建字典與單筆連網模式)';
+      });
+  }
+  syncMasterStocks();
+
+  var colors = { '半導體':'#3B82F6','AI電子':'#8B5CF6','面板光電':'#06B6D4','ETF':'#F59E0B','金融股':'#EC4899','航運傳產':'#10B981','其他':'#6B7280' };
+  var stocks = JSON.parse(localStorage.getItem('ghTwPortfolioV1')) || [
+    { name: '富采', code: '3714', cat: '面板光電', shares: 1000, price: 42.5, prev: 41.0, cost: 40000 },
+    { name: '群創', code: '3481', cat: '面板光電', shares: 1000, price: 50, prev: 45, cost: 30000 },
+    { name: '日月光投控', code: '3711', cat: '半導體', shares: 2500, price: 530, prev: 482, cost: 1660000 }
+  ];
+  var curTab = '全部';
+
+  var elName = document.getElementById('inName');
+  var elCode = document.getElementById('inCode');
+  var elCat = document.getElementById('inCat');
