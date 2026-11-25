@@ -7,6 +7,15 @@ db.split("|").forEach(function(r) {
   dict[c] = { name: n, cat: cat };
 });
 
+// 自動在輸入框上方建立一排「候選完整股名快選膠囊」容器
+var suggestBox = document.createElement('div');
+suggestBox.id = 'suggestBox';
+suggestBox.style.cssText = 'display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px;';
+var gridEl = document.querySelector('.grid');
+if (gridEl && gridEl.parentNode) {
+  gridEl.parentNode.insertBefore(suggestBox, gridEl);
+}
+
 var liveData = {};
 function loadLocalJson(cb) {
   fetch('prices.json?t=' + Date.now())
@@ -35,12 +44,25 @@ function fmt(n, s) { var r = Math.round(n), str = Math.abs(r).toLocaleString(); 
 function clearPrices() {
   document.getElementById('inPrice').value = '';
   document.getElementById('inPrev').value = '';
+  suggestBox.style.display = 'none';
+  suggestBox.innerHTML = '';
 }
 
 function fillPriceIfFound(c) {
   if (liveData[c]) {
     document.getElementById('inPrice').value = liveData[c].p;
     document.getElementById('inPrev').value = liveData[c].y;
+  }
+}
+
+// 點擊候選膠囊後，立刻將股名補全為完整名稱
+function pickCandidate(code) {
+  if (dict[code]) {
+    document.getElementById('inName').value = dict[code].name;
+    document.getElementById('inCode').value = code;
+    document.getElementById('inCat').value = dict[code].cat;
+    fillPriceIfFound(code);
+    suggestBox.style.display = 'none';
   }
 }
 
@@ -51,6 +73,7 @@ function syncCode(v) {
     clearPrices();
     return;
   }
+  suggestBox.style.display = 'none';
   if (dict[c]) { elN.value = dict[c].name; elC.value = dict[c].cat; }
   else if (c.indexOf('00') === 0) { elC.value = 'ETF'; }
   fillPriceIfFound(c);
@@ -63,11 +86,52 @@ function syncName(v) {
     clearPrices();
     return;
   }
-  if (q.length < 2) return;
+  if (q.length < 2) {
+    suggestBox.style.display = 'none';
+    return;
+  }
+
+  var matches = [];
   for (var k in dict) {
-    if (dict[k].name.toUpperCase().indexOf(q) !== -1) { elK.value = k; elC.value = dict[k].cat; fillPriceIfFound(k); break; }
+    if (dict[k].name.toUpperCase().indexOf(q) !== -1) {
+      matches.push({ code: k, name: dict[k].name, cat: dict[k].cat });
+    }
+  }
+
+  if (matches.length > 0) {
+    var first = matches[0];
+    elK.value = first.code;
+    elC.value = first.cat;
+    fillPriceIfFound(first.code);
+
+    // 若輸入的是簡稱（尚未打完完整股名），顯示一鍵補全完整股名按鈕（最多顯示 4 筆相似股）
+    if (first.name.toUpperCase() !== q) {
+      suggestBox.style.display = 'flex';
+      suggestBox.innerHTML = matches.slice(0, 4).map(function(m) {
+        return '<span onclick="pickCandidate(\'' + m.code + '\')" style="background:#2A2412;border:1px solid #FBBF24;color:#FBBF24;font-size:12px;padding:4px 10px;border-radius:14px;cursor:pointer;">👉 ' + m.name + ' (' + m.code + ')</span>';
+      }).join('');
+    } else {
+      suggestBox.style.display = 'none';
+    }
+  } else {
+    suggestBox.style.display = 'none';
   }
 }
+
+// 當使用者離開股名輸入框時，若剛好只匹配到唯一一檔，也自動補全為完整股名
+document.getElementById('inName').addEventListener('blur', function() {
+  var q = this.value.trim().toUpperCase();
+  if (q.length >= 2) {
+    var exactOrSingle = [];
+    for (var k in dict) {
+      if (dict[k].name.toUpperCase().indexOf(q) !== -1) exactOrSingle.push(dict[k].name);
+    }
+    if (exactOrSingle.length === 1) {
+      this.value = exactOrSingle[0];
+      suggestBox.style.display = 'none';
+    }
+  }
+});
 
 function render() {
   var cats = ['全部'];
@@ -104,6 +168,7 @@ function addStock() {
   var cost = parseFloat(document.getElementById('inCost').value), prev = parseFloat(document.getElementById('inPrev').value);
   stocks.unshift({ name: n, code: c, cat: document.getElementById('inCat').value, shares: sh, price: pr, cost: isNaN(cost) ? sh * pr : cost, prev: isNaN(prev) ? pr : prev });
   ['inName','inCode','inShares','inCost','inPrice','inPrev'].forEach(function(id) { document.getElementById(id).value = ''; });
+  suggestBox.style.display = 'none';
   localStorage.setItem('twStocksV10', JSON.stringify(stocks));
   render();
 }
