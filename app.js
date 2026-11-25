@@ -32,6 +32,11 @@ var curTab = '全部';
 function forceReload() { window.location.replace(window.location.pathname + '?t=' + Date.now()); }
 function fmt(n, s) { var r = Math.round(n), str = Math.abs(r).toLocaleString(); return s ? (r > 0 ? '+' : r < 0 ? '-' : '') + str : (r < 0 ? '-' : '') + str; }
 
+function clearPrices() {
+  document.getElementById('inPrice').value = '';
+  document.getElementById('inPrev').value = '';
+}
+
 function fillPriceIfFound(c) {
   if (liveData[c]) {
     document.getElementById('inPrice').value = liveData[c].p;
@@ -41,7 +46,11 @@ function fillPriceIfFound(c) {
 
 function syncCode(v) {
   var c = v.trim().toUpperCase(), elN = document.getElementById('inName'), elC = document.getElementById('inCat');
-  if (!c) { elN.value = ''; return; }
+  if (!c) {
+    elN.value = '';
+    clearPrices();
+    return;
+  }
   if (dict[c]) { elN.value = dict[c].name; elC.value = dict[c].cat; }
   else if (c.indexOf('00') === 0) { elC.value = 'ETF'; }
   fillPriceIfFound(c);
@@ -49,7 +58,11 @@ function syncCode(v) {
 
 function syncName(v) {
   var q = v.trim().toUpperCase(), elK = document.getElementById('inCode'), elC = document.getElementById('inCat');
-  if (!q) { elK.value = ''; return; }
+  if (!q) {
+    elK.value = '';
+    clearPrices();
+    return;
+  }
   if (q.length < 2) return;
   for (var k in dict) {
     if (dict[k].name.toUpperCase().indexOf(q) !== -1) { elK.value = k; elC.value = dict[k].cat; fillPriceIfFound(k); break; }
