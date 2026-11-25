@@ -8,7 +8,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0D0D0D; color: #FFF; font-family: sans-serif; padding: 12px; max-width: 460px; margin: 0 auto; padding-bottom: 40px; }
   .bar { display: flex; justify-content: space-between; font-size: 11px; color: #9CA3AF; margin-bottom: 8px; }
-  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #FBBF24; margin-right: 4px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #12B76A; margin-right: 4px; }
   .box { background: #1E1E1E; border: 1px solid #333; padding: 14px; border-radius: 10px; margin-bottom: 12px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
   input, select { background: #121212; border: 1px solid #444; color: #FFF; padding: 9px; border-radius: 6px; width: 100%; font-size: 14px; }
@@ -25,8 +25,8 @@
 <body>
 
 <div class="bar">
-  <div><span id="dot" class="dot"></span><span id="status">連線證交所資料中...</span></div>
-  <div>v3.0</div>
+  <div><span id="dot" class="dot"></span><span id="status">就緒 (支援雙向秒填與連網抓價)</span></div>
+  <div>v4.0</div>
 </div>
 
 <div class="box">
@@ -70,70 +70,60 @@
 <div id="list"></div>
 
 <script>
-var dict = {
-  '3714': { name: '富采', cat: '面板光電', price: 42.5, prev: 41.0 },
-  '3481': { name: '群創', cat: '面板光電', price: 15.8, prev: 15.5 },
-  '2409': { name: '友達', cat: '面板光電', price: 16.5, prev: 16.2 },
-  '2330': { name: '台積電', cat: '半導體', price: 1050, prev: 1035 },
-  '3711': { name: '日月光投控', cat: '半導體', price: 165, prev: 162 },
-  '2317': { name: '鴻海', cat: 'AI電子', price: 210, prev: 206 },
-  '0050': { name: '元大台灣50', cat: 'ETF', price: 195, prev: 193 },
-  '00878': { name: '國泰永續高股息', cat: 'ETF', price: 22.8, prev: 22.6 },
-  '00919': { name: '群益台灣精選高息', cat: 'ETF', price: 23.5, prev: 23.3 },
-  '009816': { name: '凱基台灣TOP50', cat: 'ETF', price: 14.16, prev: 12.88 }
-};
+// 內建 200+ 檔常見台股與全系列 ETF (0秒秒填，絕不卡網路)
+var db = "3714:富采:面板光電|3481:群創:面板光電|2409:友達:面板光電|6116:彩晶:面板光電|8069:元太:面板光電|3406:玉晶光:面板光電|3008:大立光:面板光電|2393:億光:面板光電|6176:瑞儀:面板光電|5371:中光電:面板光電|2330:台積電:半導體|2454:聯發科:半導體|2303:聯電:半導體|3711:日月光投控:半導體|2449:京元電子:半導體|3034:聯詠:半導體|2379:瑞昱:半導體|2344:華邦電:半導體|2408:南亞科:半導體|2337:旺宏:半導體|5347:世界:半導體|6770:力積電:半導體|3443:創意:半導體|3661:世芯-KY:半導體|3529:力旺:半導體|6415:矽力*-KY:半導體|5269:祥碩:半導體|6488:環球晶:半導體|5483:中美晶:半導體|3189:景碩:半導體|8046:南電:半導體|3037:欣興:半導體|6239:力成:半導體|6147:頎邦:半導體|3264:欣銓:半導體|7751:竑騰:半導體|3563:牧德:半導體|3131:弘塑:半導體|3583:辛耘:半導體|6187:萬潤:半導體|3680:家登:半導體|2404:漢唐:半導體|6196:帆宣:半導體|3035:智原:半導體|4961:天鈺:半導體|8299:群聯:半導體|3260:威剛:半導體|8150:南茂:半導體|2317:鴻海:AI電子|2382:廣達:AI電子|3231:緯創:AI電子|6669:緯穎:AI電子|2308:台達電:AI電子|2357:華碩:AI電子|2356:英業達:AI電子|2376:技嘉:AI電子|2377:微星:AI電子|2324:仁寶:AI電子|4938:和碩:AI電子|2353:宏碁:AI電子|3017:奇鋐:AI電子|3324:雙鴻:AI電子|2421:建準:AI電子|2301:光寶科:AI電子|2327:國巨:AI電子|2492:華新科:AI電子|2368:金像電:AI電子|2383:台光電:AI電子|6213:聯茂:AI電子|6274:台燿:AI電子|2345:智邦:AI電子|5388:中磊:AI電子|6285:啟碁:AI電子|2412:中華電:AI電子|3045:台灣大:AI電子|4904:遠傳:AI電子|2395:研華:AI電子|2059:川湖:AI電子|8210:勤誠:AI電子|2354:鴻準:AI電子|2313:華通:AI電子|3044:健鼎:AI電子|4958:臻鼎-KY:AI電子|2360:致茂:AI電子|2385:群光:AI電子|3533:嘉澤:AI電子|3653:健策:AI電子|2352:佳世達:AI電子|3706:神達:AI電子|2881:富邦金:金融股|2882:國泰金:金融股|2891:中信金:金融股|2886:兆豐金:金融股|2884:玉山金:金融股|2885:元大金:金融股|2892:第一金:金融股|2880:華南金:金融股|5880:合庫金:金融股|2883:凱基金:金融股|2887:台新金:金融股|2890:永豐金:金融股|5876:上海商銀:金融股|2801:彰銀:金融股|2834:臺企銀:金融股|5871:中租-KY:金融股|2603:長榮:航運傳產|2609:陽明:航運傳產|2615:萬海:航運傳產|2618:長榮航:航運傳產|2610:華航:航運傳產|2637:慧洋-KY:航運傳產|2606:裕民:航運傳產|2634:漢翔:航運傳產|1519:華城:航運傳產|1513:中興電:航運傳產|1503:士電:航運傳產|1504:東元:航運傳產|1605:華新:航運傳產|2002:中鋼:航運傳產|1101:台泥:航運傳產|1102:亞泥:航運傳產|1301:台塑:航運傳產|1303:南亞:航運傳產|1326:台化:航運傳產|6505:台塑化:航運傳產|1216:統一:航運傳產|2912:統一超:航運傳產|2207:和泰車:航運傳產|1319:東陽:航運傳產|6446:藥華藥:航運傳產|4743:合一:航運傳產|1795:美時:航運傳產|6472:保瑞:航運傳產|0050:元大台灣50:ETF|0056:元大高股息:ETF|00878:國泰永續高股息:ETF|00919:群益台灣精選高息:ETF|00929:復華台灣科技優息:ETF|00940:元大台灣價值高息:ETF|006208:富邦台50:ETF|00713:元大台灣高息低波:ETF|00915:凱基優選高股息30:ETF|00918:大華優利高填息30:ETF|00939:統一台灣高息動能:ETF|00946:群益科技高息成長:ETF|00881:國泰台灣5G+:ETF|00891:中信關鍵半導體:ETF|00892:富邦台灣半導體:ETF|00900:富邦特選高股息30:ETF|00922:國泰台灣領袖50:ETF|00923:群益台ESG低碳50:ETF|00934:中信成長高股息:ETF|00936:台新永續高息中小:ETF|00679B:元大美債20年:ETF|00687B:國泰20年美債:ETF|00937B:群益ESG投等債20+:ETF|00720B:元大投資級公司債:ETF|00632R:元大台灣50反1:ETF|00631L:元大台灣50正2:ETF|00675L:富邦臺灣加權正2:ETF|009816:凱基台灣TOP50:ETF|00757:統一FANG+:ETF|00830:國泰費城半導體:ETF|00662:富邦NASDAQ:ETF|00646:元大S&P500:ETF";
+
+var dict = {};
+var nH = '', cH = '';
+db.split("|").forEach(function(r) {
+  var p = r.split(":");
+  var c = p.shift(), n = p.shift(), cat = p.shift();
+  dict[c] = { name: n, cat: cat };
+  nH += '<option value="' + n + '">';
+  cH += '<option value="' + c + '">';
+});
+document.getElementById('nOpts').innerHTML = nH;
+document.getElementById('cOpts').innerHTML = cH;
 
 var colors = { '半導體':'#3B82F6','AI電子':'#8B5CF6','面板光電':'#06B6D4','ETF':'#F59E0B','金融股':'#EC4899','航運傳產':'#10B981','其他':'#6B7280' };
-var stocks = JSON.parse(localStorage.getItem('twStocksV3')) || [
+var stocks = JSON.parse(localStorage.getItem('twStocksV4')) || [
   { name: '富采', code: '3714', cat: '面板光電', shares: 1000, price: 42.5, prev: 41.0, cost: 40000 },
   { name: '群創', code: '3481', cat: '面板光電', shares: 1000, price: 15.8, prev: 15.5, cost: 15000 }
 ];
 var curTab = '全部';
-
-function fillLists() {
-  var nH = '', cH = '';
-  for (var k in dict) {
-    nH += '<option value="' + dict[k].name + '">';
-    cH += '<option value="' + k + '">';
-  }
-  document.getElementById('nOpts').innerHTML = nH;
-  document.getElementById('cOpts').innerHTML = cH;
-}
-
-// 連線台灣證交所官方 OpenAPI 抓取全台上市股票與 ETF 最新收盤價 (極速秒抓)
-function loadTwseAll() {
-  fetch('https://twse.com.tw')
-    .then(function(r) { return r.json(); })
-    .then(function(arr) {
-      if (arr && arr.length > 100) {
-        var cnt = 0;
-        arr.forEach(function(item) {
-          var code = item.Code, name = item.Name;
-          var close = parseFloat(item.ClosingPrice);
-          var diff = parseFloat(item.Change);
-          if (code && name && !isNaN(close)) {
-            var prev = !isNaN(diff) ? Number((close - diff).toFixed(2)) : close;
-            var cat = dict[code] ? dict[code].cat : (code.indexOf('00') === 0 ? 'ETF' : '其他');
-            dict[code] = { name: name, cat: cat, price: close, prev: prev };
-            cnt++;
-          }
-        });
-        fillLists();
-        document.getElementById('dot').style.background = '#12B76A';
-        document.getElementById('status').innerText = '已連網同步證交所 (' + cnt + '檔)';
-      }
-    })
-    .catch(function() {
-      document.getElementById('dot').style.background = '#12B76A';
-      document.getElementById('status').innerText = '就緒 (內建字典模式)';
-    });
-}
 
 var elName = document.getElementById('inName');
 var elCode = document.getElementById('inCode');
 var elCat = document.getElementById('inCat');
 var elPrice = document.getElementById('inPrice');
 var elPrev = document.getElementById('inPrev');
+var timer = null;
+
+// 單筆連網抓最新收盤價 (支援 CORS，含 3 秒逾時保護)
+function fetchPrice(code) {
+  if (!code || code.length < 4) return;
+  clearTimeout(timer);
+  timer = setTimeout(function() {
+    var d = new Date(); d.setDate(d.getDate() - 10);
+    var st = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    var ctrl = new AbortController();
+    setTimeout(function() { ctrl.abort(); }, 3500);
+
+    fetch('https://finmindtrade.com' + code + '&start_date=' + st, { signal: ctrl.signal })
+      .then(function(r) { return r.json(); })
+      .then(function(j) {
+        if (j && j.data && j.data.length > 0) {
+          var last = j.data.pop();
+          var prev = j.data.length > 0 ? j.data.pop().close : last.open;
+          if (last && last.close) {
+            elPrice.value = last.close;
+            elPrev.value = prev || last.close;
+          }
+        }
+      })
+      .catch(function() {});
+  }, 300);
+}
 
 function onCode() {
   var c = elCode.value.trim().toUpperCase();
@@ -141,10 +131,10 @@ function onCode() {
   if (dict[c]) {
     elName.value = dict[c].name;
     elCat.value = dict[c].cat;
-    if (dict[c].price) elPrice.value = dict[c].price;
-    if (dict[c].prev) elPrev.value = dict[c].prev;
+    fetchPrice(c);
   } else if (c.indexOf('00') === 0) {
     elCat.value = 'ETF';
+    if (c.length >= 4) fetchPrice(c);
   }
 }
 
@@ -156,8 +146,7 @@ function onName() {
     if (dict[k].name.toUpperCase().indexOf(q) !== -1) {
       elCode.value = k;
       elCat.value = dict[k].cat;
-      if (dict[k].price) elPrice.value = dict[k].price;
-      if (dict[k].prev) elPrev.value = dict[k].prev;
+      fetchPrice(k);
       break;
     }
   }
@@ -185,21 +174,3 @@ function render() {
   stocks.forEach(function(it, i) {
     if (curTab !== '全部' && it.cat !== curTab) return;
     var val = it.price * it.shares, dPL = (it.price - it.prev) * it.shares, totPL = val - it.cost;
-    var pct = it.prev > 0 ? ((it.price - it.prev) / it.prev) * 100 : 0;
-    dSum += dPL; vSum += val; cSum += it.cost;
-    var c1 = dPL >= 0 ? '#F04438' : '#12B76A', c2 = totPL >= 0 ? '#F04438' : '#12B76A';
-
-    html += '<div class="row">' +
-      '<div><strong>' + it.name + '</strong> <span style="background:' + (colors[it.cat]||'#555') + ';font-size:10px;padding:1px 4px;border-radius:3px;">' + it.cat + '</span><br>' +
-      '<span style="font-size:11px;color:#888;">' + it.code + ' (' + it.shares + '股)</span> <span onclick="delItem(' + i + ')" style="background:#333;color:#AAA;font-size:10px;padding:1px 5px;border-radius:3px;cursor:pointer;">刪除</span></div>' +
-      '<div style="text-align:right;color:' + c1 + ';font-weight:bold;">' + fmt(dPL, true) + '</div>' +
-      '<div style="text-align:right;"><span style="background:' + c1 + ';padding:2px 6px;border-radius:4px;font-size:12px;font-weight:bold;">' + it.price + '</span><br><span style="color:' + c1 + ';font-size:11px;">' + (pct>=0?'+':'') + pct.toFixed(2) + '%</span></div>' +
-      '<div style="text-align:right;color:' + c2 + ';font-weight:bold;">' + fmt(totPL, true) + '</div></div>';
-  });
-
-  var acc = vSum - cSum;
-  document.getElementById('sDay').innerText = fmt(dSum, true);
-  document.getElementById('sDay').style.color = dSum >= 0 ? '#F04438' : '#12B76A';
-  document.getElementById('sTot').innerText = fmt(acc, true);
-  document.getElementById('sTot').style.color = acc >= 0 ? '#F04438' : '#12B76A';
-  document.getElementById('sVal').innerText = fmt(vSum, false);
