@@ -24,28 +24,18 @@
 </style>
 </head>
 <body>
-
 <div class="bar">
-  <div><span class="dot"></span><span id="netTxt">就緒 (證交所官方直連引擎)</span></div>
-  <div>
-    <span onclick="forceReload()" style="background:#262626;color:#FBBF24;padding:2px 6px;border-radius:4px;cursor:pointer;margin-right:4px;">⚡ 強制刷新</span>
-    <span>v9.0</span>
-  </div>
+  <div><span class="dot"></span><span>就緒 (模組化雙向直連版)</span></div>
+  <div><span onclick="forceReload()" style="background:#262626;color:#FBBF24;padding:2px 6px;border-radius:4px;cursor:pointer;margin-right:4px;">⚡ 強制刷新</span><span>v10.0</span></div>
 </div>
-
 <div class="box">
   <div style="font-size:14px;font-weight:bold;color:#FBBF24;margin-bottom:8px;">➕ 新增我的個股</div>
   <div class="grid">
     <input type="text" id="inName" class="hl" oninput="syncName(this.value)" onkeyup="syncName(this.value)" placeholder="輸入股名 (如: 富采)">
     <input type="text" id="inCode" class="hl" oninput="syncCode(this.value)" onkeyup="syncCode(this.value)" placeholder="輸入代號 (如: 3714)">
     <select id="inCat">
-      <option value="半導體">📁 半導體</option>
-      <option value="AI電子">📁 AI / 電子</option>
-      <option value="面板光電">📁 面板 / 光電</option>
-      <option value="ETF">📁 ETF 基金</option>
-      <option value="金融股">📁 金融股</option>
-      <option value="航運傳產">📁 航運 / 傳產</option>
-      <option value="其他">📁 其他自訂</option>
+      <option value="半導體">📁 半導體</option><option value="AI電子">📁 AI / 電子</option><option value="面板光電">📁 面板 / 光電</option>
+      <option value="ETF">📁 ETF 基金</option><option value="金融股">📁 金融股</option><option value="航運傳產">📁 航運 / 傳產</option><option value="其他">📁 其他自訂</option>
     </select>
     <input type="number" id="inShares" placeholder="股數 (1張=1000)">
     <input type="number" id="inCost" placeholder="買進總成本">
@@ -57,141 +47,16 @@
     <button type="button" id="btnSync" onclick="syncAll()" class="btn-live">🔄 連網更新股價</button>
   </div>
 </div>
-
 <div id="tabs" class="tabs"></div>
-
 <div class="sum">
   <div><div style="font-size:11px;color:#888;">今日損益</div><div id="sDay" style="font-size:17px;font-weight:bold;">+0</div></div>
   <div><div style="font-size:11px;color:#888;">累積損益</div><div id="sTot" style="font-size:17px;font-weight:bold;">0</div></div>
   <div><div style="font-size:11px;color:#888;">股票市值</div><div id="sVal" style="font-size:17px;font-weight:bold;">0</div></div>
 </div>
-
 <div style="display:grid;grid-template-columns:3.4fr 2.4fr 2fr 2.4fr;padding:6px;border-bottom:1px solid #333;color:#888;font-size:12px;">
   <div>庫存股 / 群組</div><div style="text-align:right;">今日損益</div><div style="text-align:right;">現價/漲跌</div><div style="text-align:right;">總損益</div>
 </div>
 <div id="list"></div>
-
-<script>
-var db = "3714:富采:面板光電|3481:群創:面板光電|2409:友達:面板光電|6116:彩晶:面板光電|8069:元太:面板光電|3406:玉晶光:面板光電|3008:大立光:面板光電|2393:億光:面板光電|2330:台積電:半導體|2454:聯發科:半導體|2303:聯電:半導體|3711:日月光投控:半導體|2449:京元電子:半導體|3034:聯詠:半導體|2379:瑞昱:半導體|2344:華邦電:半導體|2408:南亞科:半導體|2337:旺宏:半導體|5347:世界:半導體|6770:力積電:半導體|3443:創意:半導體|3661:世芯-KY:半導體|3529:力旺:半導體|6415:矽力*-KY:半導體|5269:祥碩:半導體|6488:環球晶:半導體|5483:中美晶:半導體|3189:景碩:半導體|8046:南電:半導體|3037:欣興:半導體|6239:力成:半導體|6147:頎邦:半導體|3264:欣銓:半導體|7751:竑騰:半導體|3563:牧德:半導體|2317:鴻海:AI電子|2382:廣達:AI電子|3231:緯創:AI電子|6669:緯穎:AI電子|2308:台達電:AI電子|2357:華碩:AI電子|2356:英業達:AI電子|2376:技嘉:AI電子|2377:微星:AI電子|2324:仁寶:AI電子|4938:和碩:AI電子|2353:宏碁:AI電子|3017:奇鋐:AI電子|3324:雙鴻:AI電子|2301:光寶科:AI電子|2327:國巨:AI電子|2368:金像電:AI電子|2383:台光電:AI電子|2345:智邦:AI電子|2412:中華電:AI電子|3045:台灣大:AI電子|4904:遠傳:AI電子|2881:富邦金:金融股|2882:國泰金:金融股|2891:中信金:金融股|2886:兆豐金:金融股|2884:玉山金:金融股|2885:元大金:金融股|2892:第一金:金融股|2880:華南金:金融股|5880:合庫金:金融股|2883:凱基金:金融股|2887:台新金:金融股|2890:永豐金:金融股|2603:長榮:航運傳產|2609:陽明:航運傳產|2615:萬海:航運傳產|2618:長榮航:航運傳產|2610:華航:航運傳產|2634:漢翔:航運傳產|1519:華城:航運傳產|1513:中興電:航運傳產|1503:士電:航運傳產|2002:中鋼:航運傳產|1101:台泥:航運傳產|1301:台塑:航運傳產|1216:統一:航運傳產|0050:元大台灣50:ETF|0056:元大高股息:ETF|00878:國泰永續高股息:ETF|00919:群益台灣精選高息:ETF|00929:復華台灣科技優息:ETF|00940:元大台灣價值高息:ETF|006208:富邦台50:ETF|00713:元大台灣高息低波:ETF|00915:凱基優選高股息30:ETF|00918:大華優利高填息30:ETF|00939:統一台灣高息動能:ETF|00946:群益科技高息成長:ETF|00679B:元大美債20年:ETF|00687B:國泰20年美債:ETF|00937B:群益ESG投等債20+:ETF|009816:凱基台灣TOP50:ETF";
-
-var dict = {};
-db.split("|").forEach(function(r) {
-  var p = r.split(":");
-  var c = p.shift(), n = p.shift(), cat = p.shift();
-  dict[c] = { name: n, cat: cat };
-});
-
-var colors = { '半導體':'#3B82F6','AI電子':'#8B5CF6','面板光電':'#06B6D4','ETF':'#F59E0B','金融股':'#EC4899','航運傳產':'#10B981','其他':'#6B7280' };
-var stocks = JSON.parse(localStorage.getItem('twStocksV9')) || [
-  { name: '富采', code: '3714', cat: '面板光電', shares: 1000, price: 42.5, prev: 41.0, cost: 40000 },
-  { name: '群創', code: '3481', cat: '面板光電', shares: 1000, price: 15.8, prev: 15.5, cost: 15000 }
-];
-var curTab = '全部';
-
-function forceReload() { window.location.replace(window.location.pathname + '?t=' + Date.now()); }
-function fmt(n, s) { var r = Math.round(n), str = Math.abs(r).toLocaleString(); return s ? (r > 0 ? '+' : r < 0 ? '-' : '') + str : (r < 0 ? '-' : '') + str; }
-
-// 台灣證交所官方直連 JSONP 引擎 (免代理、100% 穿透跨域限制、同時抓股名與即時價格)
-function fetchTwseDirect(codeList, callback) {
-  if (!codeList || codeList.length === 0) { callback({}); return; }
-  var cbName = 'twse_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-  var query = [];
-  codeList.forEach(function(c) {
-    query.push('tse_' + c + '.tw');
-    query.push('otc_' + c + '.tw');
-  });
-
-  var script = document.createElement('script');
-  var timer = setTimeout(function() {
-    delete window[cbName];
-    if (script.parentNode) script.parentNode.removeChild(script);
-    callback({});
-  }, 5000);
-
-  window[cbName] = function(data) {
-    clearTimeout(timer);
-    delete window[cbName];
-    if (script.parentNode) script.parentNode.removeChild(script);
-    var map = {};
-    if (data && data.msgArray) {
-      data.msgArray.forEach(function(item) {
-        if (item.c) {
-          var p = parseFloat(item.z);
-          if (isNaN(p)) p = parseFloat(item.y);
-          var prev = parseFloat(item.y);
-          if (!isNaN(p)) {
-            map[item.c] = { name: item.n || '', price: p, prev: isNaN(prev) ? p : prev };
-          }
-        }
-      });
-    }
-    callback(map);
-  };
-
-  script.src = 'https://twse.com.tw' + query.join('|') + '&json=1&delay=0&callback=' + cbName;
-  script.onerror = function() {
-    clearTimeout(timer);
-    delete window[cbName];
-    if (script.parentNode) script.parentNode.removeChild(script);
-    callback({});
-  };
-  document.body.appendChild(script);
-}
-
-var tmr = null;
-function autoPrice(code) {
-  if (!code || code.length < 4) return;
-  clearTimeout(tmr);
-  tmr = setTimeout(function() {
-    document.getElementById('inPrice').placeholder = '⏳ 抓報價...';
-    fetchTwseDirect([code], function(map) {
-      document.getElementById('inPrice').placeholder = '目前股價 (自動抓)';
-      if (map[code]) {
-        if (map[code].name && !document.getElementById('inName').value) {
-          document.getElementById('inName').value = map[code].name;
-        }
-        document.getElementById('inPrice').value = map[code].price;
-        document.getElementById('inPrev').value = map[code].prev;
-      }
-    });
-  }, 300);
-}
-
-function syncCode(v) {
-  var c = v.trim().toUpperCase(), elN = document.getElementById('inName'), elC = document.getElementById('inCat');
-  if (c === '') { elN.value = ''; return; }
-  if (dict[c]) {
-    elN.value = dict[c].name;
-    elC.value = dict[c].cat;
-    autoPrice(c);
-  } else {
-    if (c.indexOf('00') === 0) elC.value = 'ETF';
-    if (c.length >= 4) autoPrice(c);
-  }
-}
-
-function syncName(v) {
-  var q = v.trim().toUpperCase(), elK = document.getElementById('inCode'), elC = document.getElementById('inCat');
-  if (q === '') { elK.value = ''; return; }
-  if (q.length < 2) return;
-  for (var k in dict) {
-    if (dict[k].name.toUpperCase().indexOf(q) !== -1) {
-      elK.value = k;
-      elC.value = dict[k].cat;
-      autoPrice(k);
-      break;
-    }
-  }
-}
-
-function render() {
-  var cats = ['全部'];
-  stocks.forEach(function(s) { if (cats.indexOf(s.cat) === -1) cats.push(s.cat); });
-  document.getElementById('tabs').innerHTML = cats.map(function(c) {
-    var act = curTab === c;
-    return '<button type="button" onclick="setTab(\'' + c + '\')" style="flex:none;background:' + (act?'#F04438':'#262626') + ';color:' + (act?'#FFF':'#AAA') + ';padding:6px 12px;border-radius:15px;font-size:12px;">' + c + '</button>';
-  }).join('');
-
-  var dSum = 0, vSum = 0, cSum = 0, html = '';
-  stocks.forEach(function(it, i) {
-    if (curTab !== '全部' && it.cat !== curTab) return;
+<script src="app.js?v=10"></script>
+</body>
+</html>
