@@ -17,28 +17,43 @@ var curTab = '全部';
 function forceReload() { window.location.replace(window.location.pathname + '?t=' + Date.now()); }
 function fmt(n, s) { var r = Math.round(n), str = Math.abs(r).toLocaleString(); return s ? (r > 0 ? '+' : r < 0 ? '-' : '') + str : (r < 0 ? '-' : '') + str; }
 
-function fetchTwse(codes, cb) {
-  if (!codes.length) { cb({}); return; }
-  var cbName = 'twse_' + Date.now() + '_' + Math.floor(Math.random() * 999);
-  var q = [];
-  codes.forEach(function(c) { q.push('tse_' + c + '.tw', 'otc_' + c + '.tw'); });
-  var s = document.createElement('script');
-  var t = setTimeout(function() { delete window[cbName]; s.remove(); cb({}); }, 5000);
-  window[cbName] = function(d) {
-    clearTimeout(t); delete window[cbName]; s.remove();
-    var m = {};
-    if (d && d.msgArray) {
-      d.msgArray.forEach(function(it) {
-        var p = parseFloat(it.z); if (isNaN(p)) p = parseFloat(it.y);
-        var y = parseFloat(it.y);
-        if (it.c && !isNaN(p)) m[it.c] = { name: it.n || '', price: p, prev: isNaN(y) ? p : y };
-      });
-    }
-    cb(m);
-  };
-  s.src = 'https://twse.com.tw' + q.join('|') + '&json=1&delay=0&callback=' + cbName;
-  s.onerror = function() { clearTimeout(t); delete window[cbName]; s.remove(); cb({}); };
-  document.body.appendChild(s);
+// 全天候 24 小時穩定抓價引擎 (抓取最近交易日正式收盤價與昨收價)
+function fetchOneStockData(code, cb) {
+  var d = new Date();
+  d.setDate(d.getDate() - 14);
+  var startStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  var url = 'https://finmindtrade.com' + code + '&start_date=' + startStr;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      if (j && j.data && j.data.length > 0) {
+        var last = j.data.pop();
+        var prev = j.data.length > 0 ? j.data.pop().close : last.open;
+        if (last && typeof last.close === 'number') {
+          cb({ price: last.close, prev: typeof prev === 'number' ? prev : last.close });
+          return;
+        }
+      }
+      cb(null);
+    })
+    .catch(function() { cb(null); });
+}
+
+// 若輸入冷門股代號，自動向公開資料庫查詢中文名稱
+function fetchUnknownName(code) {
+  fetch('https://finmindtrade.com' + code)
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      if (j && j.data && j.data.length > 0) {
+        var info = j.data.shift();
+        if (info && info.stock_name && !document.getElementById('inName').value) {
+          document.getElementById('inName').value = info.stock_name;
+          dict[code] = { name: info.stock_name, cat: code.indexOf('00') === 0 ? 'ETF' : '其他' };
+        }
+      }
+    })
+    .catch(function() {});
 }
 
 var tmr = null;
@@ -46,14 +61,16 @@ function autoPrice(c) {
   if (!c || c.length < 4) return;
   clearTimeout(tmr);
   tmr = setTimeout(function() {
-    fetchTwse([c], function(m) {
-      if (m[c]) {
-        if (m[c].name && !document.getElementById('inName').value) document.getElementById('inName').value = m[c].name;
-        document.getElementById('inPrice').value = m[c].price;
-        document.getElementById('inPrev').value = m[c].prev;
+    document.getElementById('inPrice').placeholder = '⏳ 抓收盤價...';
+    if (!dict[c]) fetchUnknownName(c);
+    fetchOneStockData(c, function(res) {
+      document.getElementById('inPrice').placeholder = '目前股價 (自動抓)';
+      if (res) {
+        document.getElementById('inPrice').value = res.price;
+        document.getElementById('inPrev').value = res.prev;
       }
     });
-  }, 300);
+  }, 350);
 }
 
 function syncCode(v) {
@@ -114,14 +131,27 @@ function addStock() {
 function syncAll() {
   var btn = document.getElementById('btnSync');
   if (!stocks.length) return;
-  btn.innerText = '⏳ 更新中...';
-  fetchTwse(stocks.map(function(it) { return it.code; }), function(m) {
-    var ok = 0;
-    stocks.forEach(function(it) { if (m[it.code]) { it.price = m[it.code].price; it.prev = m[it.code].prev; ok++; } });
-    localStorage.setItem('twStocksV10', JSON.stringify(stocks));
-    render();
-    btn.innerText = ok > 0 ? '✅ 已更新 ' + ok + ' 檔' : '⚠️ 證交所忙碌請重試';
-    setTimeout(function() { btn.innerText = '🔄 連網更新股價'; }, 2000);
+  btn.innerText = '⏳ 抓最新收盤價...';
+  var done = 0, ok = 0;
+
+  // 逐檔間隔 250ms 查詢，避免觸發免費 API 頻率限制
+  stocks.forEach(function(it, idx) {
+    setTimeout(function() {
+      fetchOneStockData(it.code, function(res) {
+        if (res) {
+          stocks[idx].price = res.price;
+          stocks[idx].prev = res.prev;
+          ok++;
+        }
+        done++;
+        if (done === stocks.length) {
+          localStorage.setItem('twStocksV10', JSON.stringify(stocks));
+          render();
+          btn.innerText = ok > 0 ? '✅ 已更新 ' + ok + ' 檔' : '⚠️ API 忙線請重試';
+          setTimeout(function() { btn.innerText = '🔄 連網更新股價'; }, 2500);
+        }
+      });
+    }, idx * 250);
   });
 }
 
