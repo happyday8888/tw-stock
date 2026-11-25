@@ -1,0 +1,48 @@
+<div style="background:#121212;color:#FFF;font-family:sans-serif;padding:12px;max-width:440px;margin:0 auto;">
+  <div style="background:#1E1E1E;border:1px solid #333;padding:12px;border-radius:8px;margin-bottom:14px;">
+    <div style="font-size:13px;font-weight:bold;color:#FBBF24;margin-bottom:8px;">➕ 新增我的個股 (支援打字與選單快選)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <input type="text" id="sName" list="nameOptions" oninput="byName(this.value)" onchange="byName(this.value)" onblur="byName(this.value)" placeholder="輸入股名 (如富采)" style="background:#121212;border:1px solid #FBBF24;color:#FFF;padding:8px;border-radius:4px;width:100%;">
+      <input type="text" id="sCode" list="codeOptions" oninput="byCode(this.value)" onchange="byCode(this.value)" onblur="byCode(this.value)" placeholder="輸入代號 (如3714)" style="background:#121212;border:1px solid #FBBF24;color:#FFF;padding:8px;border-radius:4px;width:100%;">
+      
+      <datalist id="nameOptions"></datalist>
+      <datalist id="codeOptions"></datalist>
+
+      <select id="sCat" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;font-size:13px;">
+        <option value="半導體">📁 半導體</option>
+        <option value="AI電子">📁 AI / 電子</option>
+        <option value="面板光電">📁 面板 / 光電</option>
+        <option value="ETF">📁 ETF 基金</option>
+        <option value="金融股">📁 金融股</option>
+        <option value="航運傳產">📁 航運 / 傳產</option>
+        <option value="其他">📁 其他自訂</option>
+      </select>
+      <input type="number" id="sShares" placeholder="股數 (必填，1張=1000)" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;">
+      
+      <input type="number" id="sCost" placeholder="買進總成本" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;">
+      <input type="number" step="0.01" id="sPrice" placeholder="目前股價 (必填)" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;">
+      <input type="number" step="0.01" id="sPrev" placeholder="昨日收盤價" style="background:#121212;border:1px solid #444;color:#FFF;padding:8px;border-radius:4px;width:100%;grid-column:span 2;">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="button" onclick="addMyStock()" style="flex:1;padding:9px;border:none;border-radius:5px;font-weight:bold;background:#F04438;color:#FFF;cursor:pointer;">確認加入</button>
+      <button type="button" onclick="simPrices()" style="flex:1;padding:9px;border:none;border-radius:5px;font-weight:bold;background:#333;color:#DDD;cursor:pointer;">模擬漲跌</button>
+    </div>
+  </div>
+
+  <div id="filterTabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:6px;"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:#1A1A1A;padding:12px;border-radius:8px;margin-bottom:12px;text-align:center;">
+    <div><div style="font-size:11px;color:#999;">今日損益</div><div id="sumToday" style="font-size:17px;font-weight:bold;color:#F04438;">+0</div></div>
+    <div><div style="font-size:11px;color:#999;">累積損益</div><div id="sumTotal" style="font-size:17px;font-weight:bold;color:#12B76A;">0</div></div>
+    <div><div style="font-size:11px;color:#999;">股票市值</div><div id="sumVal" style="font-size:17px;font-weight:bold;">0</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:3.4fr 2.4fr 2fr 2.4fr;padding:6px;border-bottom:1px solid #333;color:#888;font-size:12px;">
+    <div>庫存股 / 群組</div>
+    <div style="text-align:right;">今日損益</div>
+    <div style="text-align:right;">現價/漲跌</div>
+    <div style="text-align:right;">總損益</div>
+  </div>
+
+  <div id="list"></div>
+</div>
