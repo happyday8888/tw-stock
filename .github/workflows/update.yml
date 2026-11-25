@@ -10,32 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch TWSE and TPEx data
-        run: |
-          curl -s "https://twse.com.tw" -o twse.json
-          curl -s "https://tpex.org.tw" -o tpex.json
-          python3 -c '
-          import json
-          res = {}
-          try:
-              for it in json.load(open("twse.json")):
-                  c = it.get("Code")
-                  p = float(it.get("ClosingPrice", 0))
-                  d = float(it.get("Change", 0))
-                  if c and p > 0:
-                      res[c] = {"n": it.get("Name", ""), "p": p, "y": round(p - d, 2)}
-          except Exception: pass
-          try:
-              for it in json.load(open("tpex.json")):
-                  c = it.get("SecuritiesCompanyCode")
-                  p = float(it.get("Close", 0))
-                  d = float(it.get("Change", 0))
-                  if c and p > 0:
-                      res[c] = {"n": it.get("CompanyName", ""), "p": p, "y": round(p - d, 2)}
-          except Exception: pass
-          json.dump(res, open("prices.json", "w", encoding="utf-8"), ensure_ascii=False)
-          '
-          rm -f twse.json tpex.json
+      - name: Run fetch script
+        run: python3 fetch.py
       - name: Commit prices.json
         run: |
           git config user.name "github-actions"
